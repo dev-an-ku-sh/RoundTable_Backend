@@ -99,6 +99,38 @@ def create_persona_list():
     return jsonify({"response": formated_list2})
 
 #get agent perspectives
+@app.route('/get_agent_perspective', methods=['POST'])
+def get_agent_perspective():
+    agent_name = request.json.get("agent_name"), 
+    agent_perspective = request.json.get("agent_perspective"), 
+    problem_statement = request.json.get("problem_statement")
+    assistant = autogen.AssistantAgent(
+        name = agent_name, 
+        system_message= f"You are {agent_name}, your perspective is : {agent_perspective}",
+        llm_config=mistral,
+        max_consecutive_auto_reply=1
+    )
+    chat_result = user_proxy.initiate_chat(recipient=assistant, message= f'based on the perspective defined in your system message, find a solution to {problem_statement} in 20 words', silent = False, max_turns=1)
+    return jsonify({"response": chat_result.chat_history[1]['content']})
+
+#get agent feedbacks
+@app.route('/get_agent_feedback', methods=['POST'])
+def get_agent_feedback():
+    agent_name = request.json.get("agent_name"), 
+    agent_perspective = request.json.get("agent_perspective"), 
+    problem_statement = request.json.get("problem_statement")
+    solution = request.json.get("solution")
+    para_pov = "";
+    assistant = autogen.AssistantAgent(
+        name = agent_name, 
+        system_message= f"You are {agent_name}, your perspective is : {agent_perspective}",
+        llm_config=mistral,
+        max_consecutive_auto_reply=1
+    )
+    chat_result = user_proxy.initiate_chat(recipient=assistant, message= f'The solution : {solution} is being proposed for the problem {problem_statement}, based on the perspective defined in your system message, provide criticism and suggest improvements in 20 words on the proposed solution', silent = False, max_turns=1)
+    return jsonify({"response": chat_result.chat_history[1]['content']})
+
+#get agent perspectives
 @app.route('/get_agent_perspectives', methods=['POST'])
 def get_agent_perspectives():
     para_pov = "";
