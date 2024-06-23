@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import autogen
+import ast
+
 
 #Local LLM Config
 mistral = {
@@ -20,7 +22,8 @@ mistral = {
 #User Proxy Agent
 user_proxy = autogen.UserProxyAgent(
     name="Pseudo Admin",
-    default_auto_reply="No need for further improvement, the refactored version is good enough",  # needed for local LLMs
+    # default_auto_reply="No need for further improvement, the refactored version is good enough",  # needed for local LLMs
+    default_auto_reply= "...",
     code_execution_config={
         "work_dir": "code",
         "use_docker": False
@@ -94,6 +97,27 @@ def create_persona_list():
     formated_list = raw_list.replace('\n', '')
     formated_list2 = formated_list.replace('\\', '')
     return jsonify({"response": formated_list2})
+
+#get agent povs
+@app.route('/get_agent_perspectives', methods=['POST'])
+def get_agent_perspective():
+    ListOfPOVs = []
+    agent_list_str = request.json.get("agent_list")
+    agent_list = ast.literal_eval(agent_list_str)
+    problem_statement = request.json.get("problem_statement")
+    for agent in agent_list:
+        assistant = autogen.AssistantAgent(
+            name = agent[0], 
+            system_message= f"You are {agent[0]}, your perspective {agent[1]}",
+            llm_config=mistral,
+            max_consecutive_auto_reply=1
+        )
+        chat_result = user_proxy.initiate_chat(recipient=assistant, message= f'based on the perspective defined in your system message, find a solution to {problem_statement} in 20 words', silent = False, max_turns=1)
+        raw_list = chat_result.chat_history[1]['content']
+        formated_list = raw_list.replace('\n', '')
+        formated_list2 = formated_list.replace('\\', '')
+        ListOfPOVs.append(formated_list2)
+    return jsonify({"response": ListOfPOVs})
 
 if __name__ == "__main__":
     app.run(debug=True)
