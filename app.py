@@ -32,7 +32,7 @@ app = Flask(__name__)
 # Apply CORS to all routes, Needed for POST from Website
 CORS(app)
 
-#Rephrase() function
+#Rephrase()
 @app.route('/rephrase', methods=['POST'])
 def rephrase():
     
