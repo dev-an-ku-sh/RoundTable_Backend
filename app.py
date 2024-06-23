@@ -98,26 +98,86 @@ def create_persona_list():
     formated_list2 = formated_list.replace('\\', '')
     return jsonify({"response": formated_list2})
 
-#get agent povs
+#get agent perspectives
 @app.route('/get_agent_perspectives', methods=['POST'])
-def get_agent_perspective():
-    ListOfPOVs = []
+def get_agent_perspectives():
+    para_pov = "";
     agent_list_str = request.json.get("agent_list")
     agent_list = ast.literal_eval(agent_list_str)
     problem_statement = request.json.get("problem_statement")
     for agent in agent_list:
         assistant = autogen.AssistantAgent(
             name = agent[0], 
-            system_message= f"You are {agent[0]}, your perspective {agent[1]}",
+            system_message= f"You are {agent[0]}, your perspective is : {agent[1]}",
             llm_config=mistral,
             max_consecutive_auto_reply=1
         )
         chat_result = user_proxy.initiate_chat(recipient=assistant, message= f'based on the perspective defined in your system message, find a solution to {problem_statement} in 20 words', silent = False, max_turns=1)
-        raw_list = chat_result.chat_history[1]['content']
-        formated_list = raw_list.replace('\n', '')
-        formated_list2 = formated_list.replace('\\', '')
-        ListOfPOVs.append(formated_list2)
-    return jsonify({"response": ListOfPOVs})
+        para_pov = para_pov + chat_result.chat_history[1]['content'];
+    print(para_pov)
+    return jsonify({"response": para_pov})
+
+#get agent feedbacks
+@app.route('/get_agent_feedbacks', methods=['POST'])
+def get_agent_feedbacks():
+    agent_list_str = request.json.get("agent_list")
+    agent_list = ast.literal_eval(agent_list_str)
+    problem_statement = request.json.get("problem_statement")
+    solution = request.json.get("solution")
+    para_pov = "";
+    for agent in agent_list:
+        assistant = autogen.AssistantAgent(
+            name = agent[0], 
+            system_message= f"You are {agent[0]}, your perspective is : {agent[1]}",
+            llm_config=mistral,
+            max_consecutive_auto_reply=1
+        )
+        chat_result = user_proxy.initiate_chat(recipient=assistant, message= f'The solution : {solution} is being proposed for the problem {problem_statement}, based on the perspective defined in your system message, provide criticism and suggest improvements in 20 words on the proposed solution', silent = False, max_turns=1)
+        para_pov = para_pov + chat_result.chat_history[1]['content'];
+    print(para_pov)
+    return jsonify({"response": para_pov})
+
+#generate_solution
+@app.route('/generate_solution', methods=['POST'])
+def generate_solution():
+    
+    #Ideation assistant
+    ideation_assistant = autogen.AssistantAgent(
+        name="Assistant",
+        llm_config=mistral,
+        system_message="You are an assistant that carefully analysises the list of perspectives given on a problem statement and suggests a solution",
+    )
+
+    #Ideation chat
+    pov_para = request.json.get('pov_para')
+    problem_statement = request.json.get('problem_statement')
+    if pov_para is None or problem_statement is None:
+        return jsonify({"error": "Both povs & ps must be provided"}), 400
+    message = f'''Based on the perspectives described here: {pov_para}, form a step wise solution on the problem statement: {problem_statement} in 120 words'''
+    chat_result = user_proxy.initiate_chat(recipient=ideation_assistant, message=message, silent=False, max_turns=1)
+    return jsonify({"response": chat_result.chat_history[1]['content']})
+
+#generate_solution_with_feedback
+@app.route('/generate_solution_with_feedback', methods=['POST'])
+def generate_solution_with_feedback():
+    
+    #Ideation assistant
+    ideation_assistant = autogen.AssistantAgent(
+        name="Assistant",
+        llm_config=mistral,
+        system_message="You are an assistant that carefully analysises the list of perspectives given on a problem statement and suggests a solution",
+    )
+
+    #Ideation chat
+    feedback = request.json.get('feedback')
+    prev_solution = request.json.get('prev_solution')
+    problem_statement = request.json.get('problem_statement')
+    if feedback is None or problem_statement is None:
+        return jsonify({"error": "Both povs & ps must be provided"}), 400
+    message = f'''Based on the criticism and suggestions described here: {feedback}, improvise the solution : {prev_solution} for solving the problem statement: {problem_statement} in 120 words'''
+    chat_result = user_proxy.initiate_chat(recipient=ideation_assistant, message=message, silent=False, max_turns=1)
+    return jsonify({"response": chat_result.chat_history[1]['content']})
+
 
 if __name__ == "__main__":
     app.run(debug=True)
