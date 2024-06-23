@@ -1,7 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import autogen
 
 app = Flask(__name__)
+# Apply CORS to all routes
+CORS(app)
 
 @app.route('/rephrase', methods=['POST'])
 def rephrase():
