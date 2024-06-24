@@ -88,15 +88,29 @@ def create_persona_list():
      )
 
     #Persona_Creator Chat
+    # problem_statement = request.json.get("problem_statement")
+    # if problem_statement is None:
+    #     return jsonify({"error": "Problem statement must be provided"}), 400
+    # chat_result = user_proxy.initiate_chat(recipient=persona_creator_assistant, 
+    # message= problem_statement, silent = False, max_turns=1)
+    # raw_list = chat_result.chat_history[1]['content']
+    # formated_list = raw_list.replace('\n', '')
+    # formated_list2 = formated_list.replace('\\', '')
+    # return jsonify({"response": formated_list2})
     problem_statement = request.json.get("problem_statement")
     if problem_statement is None:
         return jsonify({"error": "Problem statement must be provided"}), 400
     chat_result = user_proxy.initiate_chat(recipient=persona_creator_assistant, 
-    message= problem_statement, silent = False, max_turns=1)
+    message=problem_statement, silent=False, max_turns=1)
     raw_list = chat_result.chat_history[1]['content']
-    formated_list = raw_list.replace('\n', '')
-    formated_list2 = formated_list.replace('\\', '')
-    return jsonify({"response": formated_list2})
+    # Use ast.literal_eval to safely evaluate the string representation of the list
+    try:
+        evaluated_list = ast.literal_eval(raw_list)
+    except (ValueError, SyntaxError):
+    # Handle the error if raw_list is not a valid Python literal
+        return jsonify({"error": "Invalid list format"}), 400
+    # Return the evaluated list directly in the response
+    return jsonify({"response": evaluated_list})
 
 #get agent perspectives
 @app.route('/get_agent_perspective', methods=['POST'])
